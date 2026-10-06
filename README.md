@@ -1,90 +1,261 @@
 # EdTech Platform
 
-Full-stack EdTech platform with Instructor and Student portals: course CRUD,
-enrollments with concurrency-safe duplicate prevention, ratings, Razorpay
-payments, and a hybrid (content-based + collaborative) course recommender.
+A full-stack EdTech platform where instructors can create and manage courses, while students can browse, enroll, purchase courses, and leave ratings.
 
-**Stack:** Django REST Framework + SQLite/PostgreSQL (backend), React (frontend).
+The project also includes Razorpay payments and a course recommendation system that combines content-based recommendations with collaborative filtering.
 
-## Project layout
+## Tech Stack
 
+**Backend:** Django, Django REST Framework
+**Frontend:** React
+**Database:** SQLite / PostgreSQL
+**Authentication:** JWT
+**Payments:** Razorpay
+**Recommendations:** TF-IDF + Collaborative Filtering
+
+## Features
+
+### Instructor Portal
+
+* Create, update, and delete courses
+* Add and manage lessons
+* Publish courses
+* Manage course content
+
+### Student Portal
+
+* Browse and search courses
+* Enroll in free courses
+* Purchase paid courses through Razorpay
+* Access course lessons
+* Rate courses
+* Get personalized course recommendations
+
+### Other Features
+
+* JWT-based authentication
+* Instructor and Student roles
+* Concurrency-safe course enrollment
+* Course ratings and average rating calculation
+* Razorpay payment verification on the backend
+* Hybrid course recommendation system
+
+## Project Structure
+
+```text
+EdTech Platform
+│
+├── backend/
+│   ├── users/              # User authentication and roles
+│   ├── courses/            # Course and lesson APIs
+│   ├── enrollments/        # Course enrollment
+│   ├── ratings/            # Course ratings
+│   ├── payments/           # Razorpay payment handling
+│   └── recommendations/   # Recommendation engine
+│
+└── frontend/               # React application
 ```
-backend/            Django REST API
-  users/             Custom User model (Instructor/Student role) + JWT auth
-  courses/           Course + Lesson CRUD, search
-  enrollments/       Enrollment with DB-level unique constraint (no double-enroll races)
-  ratings/           Ratings with atomic average recompute
-  payments/          Razorpay order creation + server-side signature verification
-  recommendations/   Hybrid recommender (TF-IDF content-based + user-based collaborative)
-frontend/           React app (Instructor + Student portals, Razorpay checkout)
-```
 
-## 1. Backend setup
+## Getting Started
+
+### 1. Backend Setup
+
+Go to the backend folder:
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-cp .env.example .env            # fill in SECRET_KEY and Razorpay test keys
-python manage.py migrate
-python manage.py createsuperuser   # optional, for /admin/
-
-python manage.py runserver      # http://localhost:8000
 ```
 
-Runs on SQLite with zero extra setup. To use Postgres instead, set
-`USE_POSTGRES=True` and the `DB_*` vars in `.env`, then re-run `migrate`.
+Create a virtual environment:
 
-### Getting Razorpay test keys
-1. Sign up at https://dashboard.razorpay.com (test mode is free, no KYC needed).
-2. Settings → API Keys → Generate Test Key.
-3. Put the Key ID and Key Secret into `backend/.env`.
-4. Test card: `4111 1111 1111 1111`, any future expiry, any CVV.
+```bash
+python -m venv venv
+```
 
-## 2. Frontend setup
+Activate it:
+
+**Windows:**
+
+```bash
+venv\Scripts\activate
+```
+
+**macOS/Linux:**
+
+```bash
+source venv/bin/activate
+```
+
+Install the dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+For Windows, you can also simply copy `.env.example` and rename it to `.env`.
+
+Add your Django secret key and Razorpay test credentials to the `.env` file.
+
+Run the migrations:
+
+```bash
+python manage.py migrate
+```
+
+If you want access to the Django admin panel:
+
+```bash
+python manage.py createsuperuser
+```
+
+Start the backend:
+
+```bash
+python manage.py runserver
+```
+
+The backend will be available at:
+
+```text
+http://localhost:8000
+```
+
+The project uses SQLite by default, so there is no additional database setup required.
+
+PostgreSQL can also be configured through the database variables in `.env`.
+
+---
+
+### 2. Frontend Setup
+
+Open another terminal and go to the frontend folder:
 
 ```bash
 cd frontend
-npm install
-cp .env.example .env            # set REACT_APP_RAZORPAY_KEY_ID to the same test Key ID
-npm start                       # http://localhost:3000
 ```
 
-## 3. Try it out
+Install the dependencies:
 
-1. Sign up as an **Instructor** → create a course → add a few lessons → publish it.
-2. Sign up as a **Student** (different browser/incognito, or log out first) →
-   browse courses → enroll (free) or buy (paid, via Razorpay test checkout) →
-   view lessons → leave a rating.
-3. Enroll in / rate a couple of courses as a few different students, then
-   check the "Recommended for you" section on the student dashboard — it
-   blends course-tag similarity with what similar students rated highly.
+```bash
+npm install
+```
 
-## How the trickier requirements are actually implemented
+Create your `.env` file and add the Razorpay test Key ID:
 
-- **"Concurrent access for 100+ users" (enrollments):** `enrollments/models.py`
-  has a `UniqueConstraint(student, course)`; `enrollments/views.py` wraps
-  creation in `transaction.atomic()` with `select_for_update()` and catches
-  `IntegrityError`, so two simultaneous requests from the same student can't
-  create duplicate rows — the database, not just application logic, enforces it.
-- **Rating aggregates under concurrency:** `ratings/views.py` recomputes
-  `average_rating`/`rating_count` inside a transaction that locks the course
-  row first (`select_for_update`), avoiding lost updates when ratings land
-  at nearly the same time.
-- **Payment security:** `payments/views.py` never trusts an amount or
-  "success" flag from the client. The order amount comes from the Course
-  row in the DB, and access is only granted after
-  `razorpay.Client.utility.verify_payment_signature` succeeds server-side.
-- **Hybrid recommendations:** `recommendations/services.py` — TF-IDF cosine
-  similarity over course tags/description (content-based) blended with
-  user-based collaborative filtering over the ratings matrix, each weighted
-  50/50, with graceful fallbacks for new users and under-rated courses.
+```text
+REACT_APP_RAZORPAY_KEY_ID=your_key_id
+```
 
-## What to add if you want to extend this further
-- File/video uploads for lessons (currently just a URL field)
-- Course progress tracking per lesson (field exists on Enrollment, not wired up in UI)
-- Email notifications (enrollment confirmation, payment receipt)
-- Automated tests (pytest-django for backend, React Testing Library for frontend)
-- Deploy: backend → Render/Railway, frontend → Vercel/Netlify
+Start the React application:
+
+```bash
+npm start
+```
+
+The frontend will be available at:
+
+```text
+http://localhost:3000
+```
+
+## Razorpay Test Payments
+
+The project uses Razorpay's test environment, so no real payment is made during testing.
+
+To get test credentials:
+
+1. Create an account on the Razorpay dashboard.
+2. Switch to **Test Mode**.
+3. Go to **Settings → API Keys**.
+4. Generate a test key.
+5. Add the Key ID and Key Secret to the backend `.env` file.
+
+For testing card payments, you can use:
+
+```text
+Card: 4111 1111 1111 1111
+Expiry: Any future date
+CVV: Any valid CVV
+```
+
+## How to Test the Application
+
+You can test the main flow with two different accounts.
+
+### Instructor
+
+1. Create an account as an Instructor.
+2. Create a course.
+3. Add a few lessons.
+4. Publish the course.
+
+### Student
+
+1. Create another account as a Student.
+2. Browse the available courses.
+3. Enroll in a free course or purchase a paid course.
+4. Open the course and view the lessons.
+5. Leave a rating.
+
+To see the recommendation system in action, create a few student accounts and have them enroll in and rate different courses. The recommendations will use this activity to suggest relevant courses.
+
+## Some Technical Details
+
+### Preventing Duplicate Enrollments
+
+Enrollment is protected at the database level using a unique constraint on the combination of student and course.
+
+The enrollment creation process also uses a database transaction and handles `IntegrityError`.
+
+This means that even if two enrollment requests arrive at almost the same time, the same student cannot accidentally get two enrollment records for the same course.
+
+### Rating Updates
+
+Course ratings are calculated inside a transaction while locking the relevant course row.
+
+This helps prevent incorrect average ratings when multiple users submit ratings at nearly the same time.
+
+### Payment Security
+
+The backend does not trust the payment amount or success status sent by the frontend.
+
+The payment amount is taken from the course stored in the database, and Razorpay's payment signature is verified on the server before access to the course is granted.
+
+### Course Recommendations
+
+The recommendation system combines two approaches:
+
+**Content-based recommendations**
+
+TF-IDF and cosine similarity are used to compare course descriptions and tags.
+
+**Collaborative filtering**
+
+The system also looks at ratings from different students to find courses that similar users enjoyed.
+
+These two approaches are combined to create the final recommendations.
+
+There are also fallbacks for new users and courses that do not have enough ratings yet.
+
+## Future Improvements
+
+Some things I'd like to add to the project in the future:
+
+* Video and file uploads for course lessons
+* Course progress tracking
+* Email notifications for enrollments and payments
+* More comprehensive automated tests
+* Better recommendation models as more user data becomes available
+* Deployment of the backend and frontend to a cloud platform
+
+## Project Goal
+
+I built this project to get hands-on experience with full-stack development, REST APIs, authentication, database transactions, payment integration, and recommendation systems.
+
+It also gave me an opportunity to work with some real-world backend problems such as concurrent requests, data consistency, and server-side payment validation.
