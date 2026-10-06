@@ -1,0 +1,47 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f7f8fa;
+  color: #1a1a1a;
+}
+a { text-decoration: none; color: inherit; }
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+input, textarea, select {
+  font-family: inherit;
+  padding: 8px 10px;
+  border: 1px solid #d0d3d9;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 16px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-secondary { background: #e5e7eb; color: #1a1a1a; }
+.btn-danger { background: #dc2626; color: #fff; }
+.form-stack { display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
+.error-text { color: #dc2626; font-size: 13px; }
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+}
